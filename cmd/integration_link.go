@@ -531,10 +531,6 @@ func interactiveCreate(ctx context.Context) (scalingo.SCMRepoLinkCreateParams, e
 	return params, nil
 }
 
-func runForm(ctx context.Context, fields ...huh.Field) error {
-	return huh.NewForm(huh.NewGroup(fields...)).RunWithContext(ctx)
-}
-
 func hoursBeforeDeleteValidator(ctx context.Context, hoursBeforeDelete *uint) func(string) error {
 	return func(answer string) error {
 		if answer == "" {
@@ -561,9 +557,13 @@ func askForConfirmationToAllowReviewAppsFromForks(ctx context.Context, prompt st
 
 	var confirmed bool
 
-	err := runForm(ctx, huh.NewConfirm().
-		Title(prompt).
-		Value(&confirmed))
+	err := huh.NewForm(
+		huh.NewGroup(
+			huh.NewConfirm().
+				Title(prompt).
+				Value(&confirmed),
+		),
+	).RunWithContext(ctx)
 
 	if err != nil {
 		return false, errors.Wrap(ctx, err, "fail to confirm review apps from forks")
