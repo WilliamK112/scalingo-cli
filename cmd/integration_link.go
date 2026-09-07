@@ -462,7 +462,7 @@ func interactiveCreate(ctx context.Context) (scalingo.SCMRepoLinkCreateParams, e
 	}
 	var branch string
 	var autoReviewApps bool
-	err := runPrompt(ctx,
+	err := runForm(ctx,
 		huh.NewInput().
 			Title("Branch to auto-deploy (empty to disable):").
 			Value(&branch),
@@ -485,7 +485,7 @@ func interactiveCreate(ctx context.Context) (scalingo.SCMRepoLinkCreateParams, e
 	params.DeployReviewAppsEnabled = utils.BoolPtr(true)
 
 	destroyOnClose := true
-	err = runPrompt(ctx, huh.NewConfirm().
+	err = runForm(ctx, huh.NewConfirm().
 		Title("Automatically destroy review apps when the pull/merge request is closed:").
 		Value(&destroyOnClose))
 	if err != nil {
@@ -494,7 +494,7 @@ func interactiveCreate(ctx context.Context) (scalingo.SCMRepoLinkCreateParams, e
 	params.DestroyOnCloseEnabled = &destroyOnClose
 	if destroyOnClose {
 		answerHoursBeforeDestroyOnClose := "0"
-		err = runPrompt(ctx, huh.NewInput().
+		err = runForm(ctx, huh.NewInput().
 			Title("Hours before automatically destroying the review apps:").
 			Placeholder("0").
 			Value(&answerHoursBeforeDestroyOnClose).
@@ -510,7 +510,7 @@ func interactiveCreate(ctx context.Context) (scalingo.SCMRepoLinkCreateParams, e
 	}
 
 	destroyOnStale := false
-	err = runPrompt(ctx, huh.NewConfirm().
+	err = runForm(ctx, huh.NewConfirm().
 		Title("Automatically destroy review apps after some time without deploy/commits:").
 		Value(&destroyOnStale))
 	if err != nil {
@@ -519,7 +519,7 @@ func interactiveCreate(ctx context.Context) (scalingo.SCMRepoLinkCreateParams, e
 	params.DestroyStaleEnabled = &destroyOnStale
 	if destroyOnStale {
 		answerHoursBeforeDestroyOnStale := "0"
-		err = runPrompt(ctx, huh.NewInput().
+		err = runForm(ctx, huh.NewInput().
 			Title("Hours before automatically destroying the review apps:").
 			Placeholder("0").
 			Value(&answerHoursBeforeDestroyOnStale).
@@ -543,7 +543,7 @@ func interactiveCreate(ctx context.Context) (scalingo.SCMRepoLinkCreateParams, e
 	return params, nil
 }
 
-func runPrompt(ctx context.Context, fields ...huh.Field) error {
+func runForm(ctx context.Context, fields ...huh.Field) error {
 	return huh.NewForm(huh.NewGroup(fields...)).RunWithContext(ctx)
 }
 
@@ -576,7 +576,7 @@ func askForConfirmationToAllowReviewAppsFromForks(ctx context.Context, prompt st
 
 	var confirmed bool
 
-	err := runPrompt(ctx, huh.NewConfirm().
+	err := runForm(ctx, huh.NewConfirm().
 		Title(prompt).
 		Value(&confirmed))
 
