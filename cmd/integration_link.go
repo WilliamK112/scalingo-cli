@@ -499,7 +499,7 @@ func interactiveCreate(ctx context.Context) (scalingo.SCMRepoLinkCreateParams, e
 			Title("Hours before automatically destroying the review apps:").
 			Placeholder("0").
 			Value(&answerHoursBeforeDestroyOnClose).
-			Validate(validateHoursBeforeDelete(ctx, &hoursBeforeDestroyOnClose)))
+			Validate(hoursBeforeDeleteValidator(ctx, &hoursBeforeDestroyOnClose)))
 		if err != nil {
 			return params, errors.Wrapf(ctx, err, "error enquiring about review apps destroy delay")
 		}
@@ -521,7 +521,7 @@ func interactiveCreate(ctx context.Context) (scalingo.SCMRepoLinkCreateParams, e
 			Title("Hours before automatically destroying the review apps:").
 			Placeholder("0").
 			Value(&answerHoursBeforeDestroyOnStale).
-			Validate(validateHoursBeforeDelete(ctx, &hoursBeforeDestroyOnStale)))
+			Validate(hoursBeforeDeleteValidator(ctx, &hoursBeforeDestroyOnStale)))
 		if err != nil {
 			return params, errors.Wrapf(ctx, err, "error enquiring about stale review apps destroy")
 		}
@@ -541,7 +541,7 @@ func runForm(ctx context.Context, fields ...huh.Field) error {
 	return huh.NewForm(huh.NewGroup(fields...)).RunWithContext(ctx)
 }
 
-func validateHoursBeforeDelete(ctx context.Context, hoursBeforeDelete *uint) func(string) error {
+func hoursBeforeDeleteValidator(ctx context.Context, hoursBeforeDelete *uint) func(string) error {
 	return func(answer string) error {
 		if answer == "" {
 			*hoursBeforeDelete = 0

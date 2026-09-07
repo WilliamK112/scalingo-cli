@@ -6,9 +6,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestValidateHoursBeforeDelete(t *testing.T) {
+func TestHoursBeforeDeleteValidator(t *testing.T) {
 	var hoursBeforeDelete uint
-	validate := validateHoursBeforeDelete(t.Context(), &hoursBeforeDelete)
+	validate := hoursBeforeDeleteValidator(t.Context(), &hoursBeforeDelete)
 
 	for _, value := range []string{"", "0", "1", "2147483647"} {
 		t.Run("accepts "+value, func(t *testing.T) {
