@@ -462,16 +462,51 @@ func interactiveCreate(ctx context.Context) (scalingo.SCMRepoLinkCreateParams, e
 	}
 	var branch string
 	var autoReviewApps bool
-	err := runForm(ctx,
-		huh.NewInput().
-			Title("Branch to auto-deploy (empty to disable):").
-			Value(&branch),
-		huh.NewConfirm().
-			Title("Automatically deploy review apps:").
-			Value(&autoReviewApps),
-	)
+	destroyOnClose := true
+	answerHoursBeforeDestroyOnClose := "0"
+	var hoursBeforeDestroyOnClose uint
+	destroyOnStale := false
+	answerHoursBeforeDestroyOnStale := "0"
+	var hoursBeforeDestroyOnStale uint
+	var forksAllowed bool
+
+	err := huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Branch to auto-deploy (empty to disable):").
+				Value(&branch),
+			huh.NewConfirm().
+				Title("Automatically deploy review apps:").
+				Value(&autoReviewApps),
+		),
+		huh.NewGroup(huh.NewConfirm().
+			Title("Automatically destroy review apps when the pull/merge request is closed:").
+			Value(&destroyOnClose)).
+			WithHideFunc(func() bool { return !autoReviewApps }),
+		huh.NewGroup(huh.NewInput().
+			Title("Hours before automatically destroying the review apps:").
+			Placeholder("0").
+			Value(&answerHoursBeforeDestroyOnClose).
+			Validate(hoursBeforeDeleteValidator(ctx, &hoursBeforeDestroyOnClose))).
+			WithHideFunc(func() bool { return !autoReviewApps || !destroyOnClose }),
+		huh.NewGroup(huh.NewConfirm().
+			Title("Automatically destroy review apps after some time without deploy/commits:").
+			Value(&destroyOnStale)).
+			WithHideFunc(func() bool { return !autoReviewApps }),
+		huh.NewGroup(huh.NewInput().
+			Title("Hours before automatically destroying the review apps:").
+			Placeholder("0").
+			Value(&answerHoursBeforeDestroyOnStale).
+			Validate(hoursBeforeDeleteValidator(ctx, &hoursBeforeDestroyOnStale))).
+			WithHideFunc(func() bool { return !autoReviewApps || !destroyOnStale }),
+		huh.NewGroup(huh.NewConfirm().
+			Title("Allow automatic creation of review apps from forks?").
+			Description(reviewAppsFromForksSecurityWarning).
+			Value(&forksAllowed)).
+			WithHideFunc(func() bool { return !autoReviewApps }),
+	).RunWithContext(ctx)
 	if err != nil {
-		return params, errors.Wrapf(ctx, err, "error enquiring about branch and automatic review apps deployment")
+		return params, errors.Wrapf(ctx, err, "error enquiring about integration link parameters")
 	}
 
 	if branch != "" {
@@ -483,54 +518,13 @@ func interactiveCreate(ctx context.Context) (scalingo.SCMRepoLinkCreateParams, e
 	}
 
 	params.DeployReviewAppsEnabled = utils.BoolPtr(true)
-
-	destroyOnClose := true
-	err = runForm(ctx, huh.NewConfirm().
-		Title("Automatically destroy review apps when the pull/merge request is closed:").
-		Value(&destroyOnClose))
-	if err != nil {
-		return params, errors.Wrapf(ctx, err, "error enquiring about destroy on close")
-	}
 	params.DestroyOnCloseEnabled = &destroyOnClose
 	if destroyOnClose {
-		answerHoursBeforeDestroyOnClose := "0"
-		var hoursBeforeDestroyOnClose uint
-		err := runForm(ctx, huh.NewInput().
-			Title("Hours before automatically destroying the review apps:").
-			Placeholder("0").
-			Value(&answerHoursBeforeDestroyOnClose).
-			Validate(hoursBeforeDeleteValidator(ctx, &hoursBeforeDestroyOnClose)))
-		if err != nil {
-			return params, errors.Wrapf(ctx, err, "error enquiring about review apps destroy delay")
-		}
 		params.HoursBeforeDeleteOnClose = &hoursBeforeDestroyOnClose
-	}
-
-	destroyOnStale := false
-	err = runForm(ctx, huh.NewConfirm().
-		Title("Automatically destroy review apps after some time without deploy/commits:").
-		Value(&destroyOnStale))
-	if err != nil {
-		return params, errors.Wrapf(ctx, err, "error enquiring about stale review apps destroy")
 	}
 	params.DestroyStaleEnabled = &destroyOnStale
 	if destroyOnStale {
-		answerHoursBeforeDestroyOnStale := "0"
-		var hoursBeforeDestroyOnStale uint
-		err := runForm(ctx, huh.NewInput().
-			Title("Hours before automatically destroying the review apps:").
-			Placeholder("0").
-			Value(&answerHoursBeforeDestroyOnStale).
-			Validate(hoursBeforeDeleteValidator(ctx, &hoursBeforeDestroyOnStale)))
-		if err != nil {
-			return params, errors.Wrapf(ctx, err, "error enquiring about stale review apps destroy")
-		}
 		params.HoursBeforeDeleteStale = &hoursBeforeDestroyOnStale
-	}
-
-	forksAllowed, err := askForConfirmationToAllowReviewAppsFromForks(ctx, "Allow automatic creation of review apps from forks?")
-	if err != nil {
-		return params, errors.Wrapf(ctx, err, "error enquiring about automatic review apps creation from forks")
 	}
 	params.AutomaticCreationFromForksAllowed = &forksAllowed
 
