@@ -494,17 +494,14 @@ func interactiveCreate(ctx context.Context) (scalingo.SCMRepoLinkCreateParams, e
 	params.DestroyOnCloseEnabled = &destroyOnClose
 	if destroyOnClose {
 		answerHoursBeforeDestroyOnClose := "0"
-		err = runForm(ctx, huh.NewInput().
+		var hoursBeforeDestroyOnClose uint
+		err := runForm(ctx, huh.NewInput().
 			Title("Hours before automatically destroying the review apps:").
 			Placeholder("0").
 			Value(&answerHoursBeforeDestroyOnClose).
-			Validate(validateHoursBeforeDelete(ctx)))
+			Validate(validateHoursBeforeDelete(ctx, &hoursBeforeDestroyOnClose)))
 		if err != nil {
 			return params, errors.Wrapf(ctx, err, "error enquiring about review apps destroy delay")
-		}
-		hoursBeforeDestroyOnClose, err := parseHoursBeforeDelete(ctx, answerHoursBeforeDestroyOnClose)
-		if err != nil {
-			return params, errors.Wrapf(ctx, err, "error parsing review apps destroy delay")
 		}
 		params.HoursBeforeDeleteOnClose = &hoursBeforeDestroyOnClose
 	}
@@ -519,17 +516,14 @@ func interactiveCreate(ctx context.Context) (scalingo.SCMRepoLinkCreateParams, e
 	params.DestroyStaleEnabled = &destroyOnStale
 	if destroyOnStale {
 		answerHoursBeforeDestroyOnStale := "0"
-		err = runForm(ctx, huh.NewInput().
+		var hoursBeforeDestroyOnStale uint
+		err := runForm(ctx, huh.NewInput().
 			Title("Hours before automatically destroying the review apps:").
 			Placeholder("0").
 			Value(&answerHoursBeforeDestroyOnStale).
-			Validate(validateHoursBeforeDelete(ctx)))
+			Validate(validateHoursBeforeDelete(ctx, &hoursBeforeDestroyOnStale)))
 		if err != nil {
 			return params, errors.Wrapf(ctx, err, "error enquiring about stale review apps destroy")
-		}
-		hoursBeforeDestroyOnStale, err := parseHoursBeforeDelete(ctx, answerHoursBeforeDestroyOnStale)
-		if err != nil {
-			return params, errors.Wrapf(ctx, err, "error parsing stale review apps destroy delay")
 		}
 		params.HoursBeforeDeleteStale = &hoursBeforeDestroyOnStale
 	}
@@ -547,26 +541,23 @@ func runForm(ctx context.Context, fields ...huh.Field) error {
 	return huh.NewForm(huh.NewGroup(fields...)).RunWithContext(ctx)
 }
 
-func validateHoursBeforeDelete(ctx context.Context) func(string) error {
+func validateHoursBeforeDelete(ctx context.Context, hoursBeforeDelete *uint) func(string) error {
 	return func(answer string) error {
-		_, err := parseHoursBeforeDelete(ctx, answer)
-		return err
-	}
-}
+		if answer == "" {
+			*hoursBeforeDelete = 0
+			return nil
+		}
 
-func parseHoursBeforeDelete(ctx context.Context, answer string) (uint, error) {
-	if answer == "" {
-		return 0, nil
+		hours, err := strconv.ParseInt(answer, 10, 32)
+		if err != nil {
+			return errors.Wrapf(ctx, err, "error parsing hours")
+		}
+		if hours < 0 {
+			return errors.New(ctx, "must be positive")
+		}
+		*hoursBeforeDelete = uint(hours)
+		return nil
 	}
-
-	hours, err := strconv.ParseInt(answer, 10, 32)
-	if err != nil {
-		return 0, errors.Wrapf(ctx, err, "error parsing hours")
-	}
-	if hours < 0 {
-		return 0, errors.New(ctx, "must be positive")
-	}
-	return uint(hours), nil
 }
 
 func askForConfirmationToAllowReviewAppsFromForks(ctx context.Context, prompt string) (bool, error) {
