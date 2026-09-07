@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 	nethttp "net/http"
 	"net/url"
 	"os"
@@ -551,16 +550,13 @@ func hoursBeforeDeleteValidator(ctx context.Context, hoursBeforeDelete *uint) fu
 }
 
 func askForConfirmationToAllowReviewAppsFromForks(ctx context.Context, prompt string) (bool, error) {
-	fmt.Println()
-	io.Warning(reviewAppsFromForksSecurityWarning)
-	fmt.Println()
-
 	var confirmed bool
 
 	err := huh.NewForm(
 		huh.NewGroup(
 			huh.NewConfirm().
 				Title(prompt).
+				Description(reviewAppsFromForksSecurityWarning).
 				Value(&confirmed),
 		),
 	).RunWithContext(ctx)
