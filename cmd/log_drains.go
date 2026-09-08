@@ -14,8 +14,6 @@ import (
 	"github.com/Scalingo/go-scalingo/v11"
 )
 
-const confirmDeletionSuffix = "\n\tConfirm deletion ?"
-
 var (
 	logDrainsListCommand = cli.Command{
 		Name:     "log-drains",
@@ -224,8 +222,8 @@ Warning: At the moment, only databases addons are able to forward logs to a drai
 				target = " for the application " + currentResource
 			}
 
-			message := "This operation will delete the log drain " + drain + target
-			result := askContinue(message + confirmDeletionSuffix)
+			description := "This operation will delete the log drain " + drain + target
+			result := askContinue(ctx, "Do you want to delete the log drain?", description)
 			if !result {
 				fmt.Println("Aborted")
 				return nil
@@ -248,11 +246,17 @@ Warning: At the moment, only databases addons are able to forward logs to a drai
 	}
 )
 
-func askContinue(message string) bool {
+func askContinue(ctx context.Context, title, description string) bool {
 	result := false
-	_ = huh.NewConfirm().
-		Title(message).
-		Value(&result).
-		Run()
+
+	_ = huh.NewForm(
+		huh.NewGroup(
+			huh.NewConfirm().
+				Title(title).
+				Description(description).
+				Value(&result),
+		),
+	).WithShowHelp(false).
+		RunWithContext(ctx)
 	return result
 }
